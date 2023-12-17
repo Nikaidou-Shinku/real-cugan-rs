@@ -10,7 +10,7 @@ pub struct UNetConv {
 
 impl UNetConv {
   pub fn new(
-    vb: &VarBuilder,
+    vb: VarBuilder,
     in_channels: usize,
     mid_channels: usize,
     out_channels: usize,
@@ -23,7 +23,7 @@ impl UNetConv {
       mid_channels,
       3,
       Conv2dConfig::default(),
-      vb.pp("unet_conv_1"),
+      vb.pp("conv.0"),
     )?);
 
     conv = conv.add(Activation::LeakyRelu(0.1));
@@ -33,13 +33,13 @@ impl UNetConv {
       out_channels,
       3,
       Conv2dConfig::default(),
-      vb.pp("unet_conv_2"),
+      vb.pp("conv.2"),
     )?);
 
     conv = conv.add(Activation::LeakyRelu(0.1));
 
     let seblock = if se {
-      Some(SeBlock::new(&vb.pp("unet_seblock"), out_channels, 8, true)?)
+      Some(SeBlock::new(vb.pp("seblock"), out_channels, 8, true)?)
     } else {
       None
     };

@@ -3,6 +3,11 @@ name = "real-cugan-rs"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+
 [dependencies]
 
 [dependencies.candle-core]
@@ -13,3 +18,8 @@ features = ["cuda"]
 [dependencies.candle-nn]
 git = "https://github.com/huggingface/candle.git"
 version = "0.3.2"
+
+[dependencies.image]
+version = "0.24.7"
+default-features = false
+features = ["jpeg", "png", "webp", "webp-encoder"]

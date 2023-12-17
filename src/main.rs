@@ -1,37 +1,60 @@
 mod model;
 
-use candle_core::{Device, Result, Tensor};
-use candle_nn::{Linear, Module};
+use candle_core::{DType, Device, Module, Tensor};
+use candle_nn::VarBuilder;
+use image::{io::Reader as ImageReader, ImageBuffer};
 
-struct Model {
-  first: Linear,
-  second: Linear,
-}
+use model::UpCunet2x;
 
-impl Model {
-  fn forward(&self, image: &Tensor) -> Result<Tensor> {
-    let x = self.first.forward(image)?;
-    let x = x.relu()?;
-    self.second.forward(&x)
+fn main() -> Result<(), candle_core::Error> {
+  let device = Device::new_cuda(0)?;
+
+  // TODO: args
+  let img = ImageReader::open("input.png")
+    .expect("Failed to open image file")
+    .decode()
+    .expect("Failed to decode image file");
+
+  let raw = img
+    .to_rgb8()
+    .into_raw()
+    .into_iter()
+    .map(|x| x as f32)
+    .collect();
+
+  let mut data = Tensor::from_vec(
+    raw,
+    (img.height() as usize, img.width() as usize, 3),
+    &device,
+  )?
+  .permute((2, 0, 1))?
+  .unsqueeze(0)?;
+  data = ((data / (255. / 0.7))? + 0.15)?;
+
+  let vb = VarBuilder::from_pth("./models/pro-no-denoise-up2x.pth", DType::F32, &device)?;
+  let model = UpCunet2x::new(vb, 3, 3)?;
+
+  let res = model.forward(&data)?;
+  let res = res.squeeze(0)?.permute((1, 2, 0))?;
+
+  let mut imgbuf = ImageBuffer::new(res.dim(1)? as u32, res.dim(0)? as u32);
+
+  let res: Vec<Vec<Vec<f32>>> = res.to_vec3()?;
+
+  for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
+    *pixel = image::Rgb(
+      res[y as usize][x as usize]
+        .iter()
+        .map(|&x| x as u8)
+        .collect::<Vec<_>>()
+        .try_into()
+        .unwrap(),
+    );
   }
-}
 
-fn main() -> Result<()> {
-  // Use Device::new_cuda(0)?; to use the GPU.
-  let device = Device::Cpu;
+  imgbuf
+    .save("output.png")
+    .expect("Failed to write image file");
 
-  // This has changed (784, 100) -> (100, 784) !
-  let weight = Tensor::randn(0f32, 1.0, (100, 784), &device)?;
-  let bias = Tensor::randn(0f32, 1.0, (100,), &device)?;
-  let first = Linear::new(weight, Some(bias));
-  let weight = Tensor::randn(0f32, 1.0, (10, 100), &device)?;
-  let bias = Tensor::randn(0f32, 1.0, (10,), &device)?;
-  let second = Linear::new(weight, Some(bias));
-  let model = Model { first, second };
-
-  let dummy_image = Tensor::randn(0f32, 1.0, (1, 784), &device)?;
-
-  let digit = model.forward(&dummy_image)?;
-  println!("Digit {digit:?} digit");
   Ok(())
 }

@@ -8,7 +8,7 @@ pub struct SeBlock {
 
 impl SeBlock {
   pub fn new(
-    vb: &VarBuilder,
+    vb: VarBuilder,
     in_channels: usize,
     reduction: usize,
     bias: bool,
@@ -18,7 +18,7 @@ impl SeBlock {
       in_channels / reduction,
       1,
       Conv2dConfig::default(),
-      vb.pp("se_block_conv1"),
+      vb.pp("conv1"),
     )?;
 
     let conv2 = if bias { conv2d } else { conv2d_no_bias }(
@@ -26,7 +26,7 @@ impl SeBlock {
       in_channels,
       1,
       Conv2dConfig::default(),
-      vb.pp("se_block_conv2"),
+      vb.pp("conv2"),
     )?;
 
     Ok(Self { conv1, conv2 })
@@ -35,11 +35,11 @@ impl SeBlock {
 
 impl Module for SeBlock {
   fn forward(&self, x: &Tensor) -> Result<Tensor, candle_core::Error> {
-    let mut x0 = x.mean((2, 3))?;
+    let mut x0 = x.mean_keepdim((2, 3))?;
     x0 = self.conv1.forward(&x0)?;
     x0 = x0.relu()?;
     x0 = self.conv2.forward(&x0)?;
     x0 = sigmoid(&x0)?;
-    x.mul(&x0)
+    x.broadcast_mul(&x0)
   }
 }

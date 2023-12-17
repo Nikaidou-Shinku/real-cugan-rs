@@ -1,5 +1,4 @@
 mod unet;
 mod up_cunet;
 
-// TODO
-struct RealCugan {}
+pub use up_cunet::*;
