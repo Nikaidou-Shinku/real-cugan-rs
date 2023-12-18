@@ -45,6 +45,10 @@ impl Module for UpCunet2x {
 
     x = x0.add(&x)?;
 
+    if w0 != pw || h0 != ph {
+      x = x.narrow(3, 0, w0 * 2)?.narrow(2, 0, h0 * 2)?;
+    }
+
     ((x - 0.15)? * (255. / 0.7))?.round()
   }
 }
