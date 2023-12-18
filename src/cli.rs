@@ -4,7 +4,7 @@ use clap::Parser;
 
 #[derive(Parser)]
 #[command(version, author)]
-#[command(about = "A Rust port of Real-CUGAN", long_about)]
+#[command(about = "A Rust port of Real-CUGAN", long_about = None)]
 pub struct Cli {
   #[arg(short, long, help = "Input image path")]
   #[arg(value_name = "INPUT")]
