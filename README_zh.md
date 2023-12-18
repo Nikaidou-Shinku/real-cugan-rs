@@ -1,20 +1,20 @@
 ## Real-CUGAN-rs
 
-English | [中文](./README_zh.md)
+[English](./README.md) | 中文
 
 ---
 
-A Rust port of [Real-CUGAN](https://github.com/bilibili/ailab/tree/main/Real-CUGAN).
+[Real-CUGAN](https://github.com/bilibili/ailab/tree/main/Real-CUGAN) 的 Rust 移植。
 
-### Usages
+### 使用方法
 
-Quick view:
+将 `input.webp` 超分后保存到 `output.webp`：
 
 ```shell
 real-cugan-rs -i input.webp -o output.webp
 ```
 
-Full help text:
+完整帮助文档：
 
 ```console
 A Rust port of Real-CUGAN
@@ -30,11 +30,11 @@ Options:
   -V, --version               Print version
 ```
 
-Supported image formats: JPEG, PNG, WebP.
+支持的图片格式：JPEG、PNG、WebP。
 
-### Note
+### 注意事项
 
-- Currently only 2x upscale of the pro model is supported.
-- Currently no tile support.
-- Currently transparent images are not supported.
-- **PRs are welcome!**
+- 目前仅支持 pro 模型的 2 倍超分。
+- 目前不支持切分图片后推理（仅支持直接使用整张图片进行推理）。
+- 目前不支持透明图片。
+- **欢迎 PR！**
