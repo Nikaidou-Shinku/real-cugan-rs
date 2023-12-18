@@ -10,12 +10,12 @@ pub struct UpCunet2x {
 
 impl UpCunet2x {
   pub fn new(
-    vb: VarBuilder,
     in_channels: usize,
     out_channels: usize,
+    vb: VarBuilder,
   ) -> Result<Self, candle_core::Error> {
-    let unet1 = UNet1::new(vb.pp("unet1"), in_channels, out_channels, true)?;
-    let unet2 = UNet2::new(vb.pp("unet2"), in_channels, out_channels, false)?;
+    let unet1 = UNet1::new(in_channels, out_channels, true, vb.pp("unet1"))?;
+    let unet2 = UNet2::new(in_channels, out_channels, false, vb.pp("unet2"))?;
 
     Ok(Self { unet1, unet2 })
   }
@@ -30,8 +30,8 @@ impl Module for UpCunet2x {
 
     // TODO: reflection pad
     let mut x = x
-      .pad_with_zeros(3, 18, 18 + pw - w0)?
-      .pad_with_zeros(2, 18, 18 + ph - h0)?;
+      .pad_with_same(3, 18, 18 + pw - w0)?
+      .pad_with_same(2, 18, 18 + ph - h0)?;
 
     x = self.unet1.forward(&x)?;
 

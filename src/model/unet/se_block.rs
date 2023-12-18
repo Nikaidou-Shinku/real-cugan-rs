@@ -8,10 +8,10 @@ pub struct SeBlock {
 
 impl SeBlock {
   pub fn new(
-    vb: VarBuilder,
     in_channels: usize,
     reduction: usize,
     bias: bool,
+    vb: VarBuilder,
   ) -> Result<Self, candle_core::Error> {
     let conv1 = if bias { conv2d } else { conv2d_no_bias }(
       in_channels,

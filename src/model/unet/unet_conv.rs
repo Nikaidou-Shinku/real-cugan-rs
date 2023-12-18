@@ -10,11 +10,11 @@ pub struct UNetConv {
 
 impl UNetConv {
   pub fn new(
-    vb: VarBuilder,
     in_channels: usize,
     mid_channels: usize,
     out_channels: usize,
     se: bool,
+    vb: VarBuilder,
   ) -> Result<Self, candle_core::Error> {
     let mut conv = seq();
 
@@ -39,7 +39,7 @@ impl UNetConv {
     conv = conv.add(Activation::LeakyRelu(0.1));
 
     let seblock = if se {
-      Some(SeBlock::new(vb.pp("seblock"), out_channels, 8, true)?)
+      Some(SeBlock::new(out_channels, 8, true, vb.pp("seblock"))?)
     } else {
       None
     };

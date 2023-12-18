@@ -21,10 +21,10 @@ pub struct UNet2 {
 
 impl UNet2 {
   pub fn new(
-    vb: VarBuilder,
     in_channels: usize,
     out_channels: usize,
     deconv: bool,
+    vb: VarBuilder,
   ) -> Result<Self, candle_core::Error> {
     let conf1 = Conv2dConfig {
       padding: 0,
@@ -39,16 +39,16 @@ impl UNet2 {
       dilation: 1,
     };
 
-    let conv1 = UNetConv::new(vb.pp("conv1"), in_channels, 32, 64, false)?;
+    let conv1 = UNetConv::new(in_channels, 32, 64, false, vb.pp("conv1"))?;
     let conv1_down = conv2d(64, 64, 2, conf1, vb.pp("conv1_down"))?;
 
-    let conv2 = UNetConv::new(vb.pp("conv2"), 64, 64, 128, true)?;
+    let conv2 = UNetConv::new(64, 64, 128, true, vb.pp("conv2"))?;
     let conv2_down = conv2d(128, 128, 2, conf1, vb.pp("conv2_down"))?;
 
-    let conv3 = UNetConv::new(vb.pp("conv3"), 128, 256, 128, true)?;
+    let conv3 = UNetConv::new(128, 256, 128, true, vb.pp("conv3"))?;
     let conv3_up = conv_transpose2d(128, 128, 2, conf2, vb.pp("conv3_up"))?;
 
-    let conv4 = UNetConv::new(vb.pp("conv4"), 128, 64, 64, true)?;
+    let conv4 = UNetConv::new(128, 64, 64, true, vb.pp("conv4"))?;
     let conv4_up = conv_transpose2d(64, 64, 2, conf2, vb.pp("conv4_up"))?;
 
     let conv5 = conv2d(64, 64, 3, Conv2dConfig::default(), vb.pp("conv5"))?;
@@ -115,6 +115,7 @@ impl Module for UNet2 {
     x3 = leaky_relu(&x3, 0.1)?;
 
     let mut x4 = self.conv4.forward(&(x2 + x3)?)?;
+    // TODO: alpha?
     x4 = self.conv4_up.forward(&x4)?;
     x4 = leaky_relu(&x4, 0.1)?;
 

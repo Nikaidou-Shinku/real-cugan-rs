@@ -17,12 +17,12 @@ pub struct UNet1 {
 
 impl UNet1 {
   pub fn new(
-    vb: VarBuilder,
     in_channels: usize,
     out_channels: usize,
     deconv: bool,
+    vb: VarBuilder,
   ) -> Result<Self, candle_core::Error> {
-    let conv1 = UNetConv::new(vb.pp("conv1"), in_channels, 32, 64, false)?;
+    let conv1 = UNetConv::new(in_channels, 32, 64, false, vb.pp("conv1"))?;
     let conv1_down = conv2d(
       64,
       64,
@@ -36,7 +36,7 @@ impl UNet1 {
       vb.pp("conv1_down"),
     )?;
 
-    let conv2 = UNetConv::new(vb.pp("conv2"), 64, 128, 64, true)?;
+    let conv2 = UNetConv::new(64, 128, 64, true, vb.pp("conv2"))?;
     let conv2_up = conv_transpose2d(
       64,
       64,
@@ -96,7 +96,6 @@ impl Module for UNet1 {
       .narrow(2, 4, x1.dim(2)? - 8)?;
 
     x2 = leaky_relu(&x2, 0.1)?;
-
     x2 = self.conv2.forward(&x2)?;
     x2 = self.conv2_up.forward(&x2)?;
     x2 = leaky_relu(&x2, 0.1)?;

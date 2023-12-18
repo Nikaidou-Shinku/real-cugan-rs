@@ -2,6 +2,7 @@
 name = "real-cugan-rs"
 version = "0.1.0"
 edition = "2021"
+authors = ["yurzhang <yurzhang.oi@gmail.com>"]
 
 [profile.release]
 strip = true
@@ -9,6 +10,11 @@ lto = true
 codegen-units = 1
 
 [dependencies]
+clap = { version = "4.4.11", features = ["derive"] }
+
+# logging
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["parking_lot"] }
 
 [dependencies.candle-core]
 git = "https://github.com/huggingface/candle.git"
