@@ -1,7 +1,10 @@
 use candle_core::{Module, Tensor};
 use candle_nn::VarBuilder;
 
-use crate::model::unet::{UNet1, UNet2};
+use crate::{
+  model::unet::{UNet1, UNet2},
+  utils::TensorExt,
+};
 
 pub struct UpCunet2x {
   unet1: UNet1,
@@ -28,10 +31,9 @@ impl Module for UpCunet2x {
     let ph = ((h0 - 1) / 2 + 1) * 2;
     let pw = ((w0 - 1) / 2 + 1) * 2;
 
-    // TODO: reflection pad
     let mut x = x
-      .pad_with_same(3, 18, 18 + pw - w0)?
-      .pad_with_same(2, 18, 18 + ph - h0)?;
+      .reflection_pad(3, 18, 18 + pw - w0)?
+      .reflection_pad(2, 18, 18 + ph - h0)?;
 
     x = self.unet1.forward(&x)?;
 
