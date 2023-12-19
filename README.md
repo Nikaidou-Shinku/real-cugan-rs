@@ -36,5 +36,4 @@ Supported image formats: JPEG, PNG, WebP.
 
 - Currently only 2x upscale of the pro model is supported.
 - Currently no tile support.
-- Currently transparent images are not supported.
 - **PRs are welcome!**
