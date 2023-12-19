@@ -1,3 +1,5 @@
+#![feature(iter_array_chunks)]
+
 mod cli;
 mod model;
 mod setup;
@@ -8,11 +10,14 @@ use std::env;
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::VarBuilder;
 use clap::Parser;
-use image::{io::Reader as ImageReader, ImageBuffer};
+use image::{io::Reader as ImageReader, DynamicImage};
+use resize::Pixel;
+use rgb::FromSlice;
 
 use cli::Cli;
 use model::UpCunet2x;
 use setup::setup_tracing;
+use utils::{preprocess_alpha_channel, save_image};
 
 fn main() -> Result<(), candle_core::Error> {
   setup_tracing();
@@ -37,19 +42,47 @@ fn main() -> Result<(), candle_core::Error> {
 
   tracing::info!(width, height, "Image file read");
 
-  let raw: Vec<f32> = img
-    .to_rgb8()
-    .into_raw()
-    .into_iter()
-    .map(Into::into)
-    .collect();
+  let (rgb, alpha) = match img {
+    DynamicImage::ImageRgb8(img) => {
+      tracing::info!("No alpha channel found");
+      (img.into_raw().into_iter().map(Into::into).collect(), None)
+    }
+    DynamicImage::ImageRgba8(img) => {
+      tracing::info!("Preprocess the alpha channel...");
 
-  let mut data = Tensor::from_vec(raw, (height, width, 3), &device)?
+      match preprocess_alpha_channel(img) {
+        Ok(res) => res,
+        Err(msg) => {
+          tracing::error!("{msg}");
+          return Ok(());
+        }
+      }
+    }
+    others => {
+      tracing::warn!("Convert into RGBA...");
+      let img = others.to_rgba8();
+
+      tracing::info!("Preprocess the alpha channel...");
+      match preprocess_alpha_channel(img) {
+        Ok(res) => res,
+        Err(msg) => {
+          tracing::error!("{msg}");
+          return Ok(());
+        }
+      }
+    }
+  };
+
+  if alpha.is_some() {
+    tracing::info!("Alpha channel preprocessed");
+  }
+
+  let mut data = Tensor::from_vec(rgb, (height, width, 3), &device)?
     .permute((2, 0, 1))?
     .unsqueeze(0)?;
   data = ((data / (255. / 0.7))? + 0.15)?;
 
-  tracing::info!("Preprocess the image into tensor");
+  tracing::info!("Preprocess the rgb channel into tensor");
 
   let model_path = env::current_exe()?
     .parent()
@@ -70,28 +103,43 @@ fn main() -> Result<(), candle_core::Error> {
   let res = model.forward(&data)?;
   let res = res.squeeze(0)?.permute((1, 2, 0))?;
 
-  tracing::info!("Image processed");
+  tracing::info!("Rgb channel processed");
 
-  let mut imgbuf = ImageBuffer::new(res.dim(1)?.try_into()?, res.dim(0)?.try_into()?);
+  let alpha = alpha.map(|alpha| {
+    let mut resizer = resize::new(
+      width,
+      height,
+      width * 2,
+      height * 2,
+      Pixel::Gray8,
+      resize::Type::Mitchell,
+    )
+    .expect("Failed to initialize the alpha channel resizer");
+
+    let mut dst = vec![0; width * height * 4];
+
+    resizer
+      .resize(alpha.as_gray(), dst.as_gray_mut())
+      .expect("Failed to upscale the alpha channel");
+
+    tracing::info!("Alpha channel processed");
+
+    dst
+  });
 
   let res: Vec<Vec<Vec<f32>>> = res.to_vec3()?;
 
-  for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-    let x: usize = x.try_into()?;
-    let y: usize = y.try_into()?;
-
-    let p: Vec<_> = res[y][x].iter().map(|v| v.clamp(0., 255.) as u8).collect();
-
-    *pixel = image::Rgb(p.try_into().unwrap());
+  if let Err(msg) = save_image(
+    (width * 2).try_into()?,
+    (height * 2).try_into()?,
+    res,
+    alpha,
+    &args.output_path,
+  ) {
+    tracing::error!(msg, "Failed to save image");
+  } else {
+    tracing::info!(path = ?args.output_path, "Image saved");
   }
-
-  tracing::info!("Convert the tensor to image");
-
-  imgbuf
-    .save(&args.output_path)
-    .expect("Failed to write image file");
-
-  tracing::info!(path = ?args.output_path, "Image saved");
 
   Ok(())
 }
