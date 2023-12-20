@@ -36,14 +36,14 @@ impl TensorExt for Tensor {
       let dim = dim.to_index(self.shape(), "reflection_pad")?;
       let mut v = vec![self.clone()];
       for i in 0..right {
-        v.push(self.narrow(dim, self.dim(dim)? - i - 1, 1)?)
+        v.push(self.narrow(dim, self.dim(dim)? - i - 2, 1)?)
       }
       Tensor::cat(&v, dim)
     } else if right == 0 {
       let dim = dim.to_index(self.shape(), "reflection_pad")?;
       let mut v = vec![];
       for i in 0..left {
-        v.push(self.narrow(dim, left - i - 1, 1)?)
+        v.push(self.narrow(dim, left - i, 1)?)
       }
       v.push(self.clone());
       Tensor::cat(&v, dim)
@@ -51,11 +51,11 @@ impl TensorExt for Tensor {
       let dim = dim.to_index(self.shape(), "reflection_pad")?;
       let mut v = vec![];
       for i in 0..left {
-        v.push(self.narrow(dim, left - i - 1, 1)?)
+        v.push(self.narrow(dim, left - i, 1)?)
       }
       v.push(self.clone());
       for i in 0..right {
-        v.push(self.narrow(dim, self.dim(dim)? - i - 1, 1)?)
+        v.push(self.narrow(dim, self.dim(dim)? - i - 2, 1)?)
       }
       Tensor::cat(&v, dim)
     }
