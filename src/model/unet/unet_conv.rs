@@ -4,8 +4,8 @@ use candle_nn::{conv2d, seq, Activation, Conv2dConfig, Sequential, VarBuilder};
 use super::SeBlock;
 
 pub struct UNetConv {
-  conv: Sequential,
-  seblock: Option<SeBlock>,
+  pub conv: Sequential,
+  pub seblock: Option<SeBlock>,
 }
 
 impl UNetConv {

@@ -3,6 +3,7 @@ use std::{fs::File, io::BufWriter, path::Path};
 use candle_core::{shape::Dim, Tensor};
 use image::{
   codecs::{
+    bmp::BmpEncoder,
     jpeg::JpegEncoder,
     png::{self, PngEncoder},
     webp::{self, WebPEncoder},
@@ -118,12 +119,16 @@ pub fn save_image(
 
   let path = path.as_ref();
 
-  let buffered_file_write =
+  let mut buffered_file_write =
     BufWriter::new(File::create(path).map_err(|_| "Failed to create output image file")?);
 
   match ImageFormat::from_path(path)
     .map_err(|_| "Failed to get image format from the output path")?
   {
+    ImageFormat::Bmp => {
+      BmpEncoder::new(&mut buffered_file_write).write_image(&buffer, width, height, color_type)
+    }
+
     ImageFormat::Jpeg => {
       if color_type == ColorType::Rgba8 {
         return Err("Images in JPEG format cannot save transparent layers!");

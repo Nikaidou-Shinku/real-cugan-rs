@@ -24,6 +24,10 @@ fn main() -> Result<(), candle_core::Error> {
 
   let args = Cli::parse();
 
+  if args.no_cache && args.tile_size.is_none() {
+    tracing::warn!("Cache only works with tile mode! Ignoring `--no-cache`...");
+  }
+
   let device = if args.use_cpu {
     Device::Cpu
   } else {
@@ -96,7 +100,7 @@ fn main() -> Result<(), candle_core::Error> {
   }
 
   let vb = VarBuilder::from_pth(model_path, DType::F32, &device)?;
-  let model = UpCunet2x::new(3, 3, vb)?;
+  let model = UpCunet2x::new(3, 3, args.alpha, args.tile_size, !args.no_cache, vb)?;
 
   tracing::info!("Network built");
 

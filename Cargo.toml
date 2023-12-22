@@ -10,6 +10,7 @@ lto = true
 codegen-units = 1
 
 [dependencies]
+smallvec = "1.11.2"
 clap = { version = "4.4.11", features = ["derive"] }
 rgb = "0.8.37"
 resize = "0.8.3"
@@ -30,4 +31,4 @@ version = "0.3.2"
 [dependencies.image]
 version = "0.24.7"
 default-features = false
-features = ["jpeg", "png", "webp", "webp-encoder"]
+features = ["bmp", "jpeg", "png", "webp", "webp-encoder"]

@@ -9,7 +9,7 @@ use super::{ConvBottom, UNetConv};
 pub struct UNet1 {
   conv1: UNetConv,
   conv1_down: Conv2d,
-  conv2: UNetConv,
+  pub conv2: UNetConv,
   conv2_up: ConvTranspose2d,
   conv3: Conv2d,
   conv_bottom: ConvBottom,
@@ -98,6 +98,32 @@ impl Module for UNet1 {
     x2 = leaky_relu(&x2, 0.1)?;
     x2 = self.conv2.forward(&x2)?;
     x2 = self.conv2_up.forward(&x2)?;
+    x2 = leaky_relu(&x2, 0.1)?;
+
+    let mut x3 = self.conv3.forward(&(x1 + x2)?)?;
+    x3 = leaky_relu(&x3, 0.1)?;
+
+    self.conv_bottom.forward(&x3)
+  }
+}
+
+impl UNet1 {
+  pub fn forward_a(&self, x: &Tensor) -> Result<(Tensor, Tensor), candle_core::Error> {
+    let mut x1 = self.conv1.forward(x)?;
+    let mut x2 = self.conv1_down.forward(&x1)?;
+
+    x1 = x1
+      .narrow(3, 4, x1.dim(3)? - 8)?
+      .narrow(2, 4, x1.dim(2)? - 8)?;
+
+    x2 = leaky_relu(&x2, 0.1)?;
+    x2 = self.conv2.conv.forward(&x2)?;
+
+    Ok((x1, x2))
+  }
+
+  pub fn forward_b(&self, x1: &Tensor, x2: &Tensor) -> Result<Tensor, candle_core::Error> {
+    let mut x2 = self.conv2_up.forward(x2)?;
     x2 = leaky_relu(&x2, 0.1)?;
 
     let mut x3 = self.conv3.forward(&(x1 + x2)?)?;

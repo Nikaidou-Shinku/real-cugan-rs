@@ -9,14 +9,15 @@ use super::{ConvBottom, UNetConv};
 pub struct UNet2 {
   conv1: UNetConv,
   conv1_down: Conv2d,
-  conv2: UNetConv,
+  pub conv2: UNetConv,
   conv2_down: Conv2d,
-  conv3: UNetConv,
+  pub conv3: UNetConv,
   conv3_up: ConvTranspose2d,
-  conv4: UNetConv,
+  pub conv4: UNetConv,
   conv4_up: ConvTranspose2d,
   conv5: Conv2d,
   conv_bottom: ConvBottom,
+  alpha: f64,
 }
 
 impl UNet2 {
@@ -24,6 +25,7 @@ impl UNet2 {
     in_channels: usize,
     out_channels: usize,
     deconv: bool,
+    alpha: f64,
     vb: VarBuilder,
   ) -> Result<Self, candle_core::Error> {
     let conf1 = Conv2dConfig {
@@ -87,6 +89,7 @@ impl UNet2 {
       conv4_up,
       conv5,
       conv_bottom,
+      alpha,
     })
   }
 }
@@ -115,8 +118,53 @@ impl Module for UNet2 {
     x3 = leaky_relu(&x3, 0.1)?;
 
     let mut x4 = self.conv4.forward(&(x2 + x3)?)?;
-    // TODO: alpha?
+    x4 = (x4 * self.alpha)?;
     x4 = self.conv4_up.forward(&x4)?;
+    x4 = leaky_relu(&x4, 0.1)?;
+
+    let mut x5 = self.conv5.forward(&(x1 + x4)?)?;
+    x5 = leaky_relu(&x5, 0.1)?;
+
+    self.conv_bottom.forward(&x5)
+  }
+}
+
+impl UNet2 {
+  pub fn forward_a(&self, x: &Tensor) -> Result<(Tensor, Tensor), candle_core::Error> {
+    let mut x1 = self.conv1.forward(x)?;
+    let mut x2 = self.conv1_down.forward(&x1)?;
+
+    x1 = x1
+      .narrow(3, 16, x1.dim(3)? - 32)?
+      .narrow(2, 16, x1.dim(2)? - 32)?;
+
+    x2 = leaky_relu(&x2, 0.1)?;
+    x2 = self.conv2.conv.forward(&x2)?;
+
+    Ok((x1, x2))
+  }
+
+  pub fn forward_b(&self, x2: &Tensor) -> Result<(Tensor, Tensor), candle_core::Error> {
+    let mut x3 = self.conv2_down.forward(x2)?;
+
+    let x2 = x2
+      .narrow(3, 4, x2.dim(3)? - 8)?
+      .narrow(2, 4, x2.dim(2)? - 8)?;
+
+    x3 = leaky_relu(&x3, 0.1)?;
+    x3 = self.conv3.conv.forward(&x3)?;
+
+    Ok((x2, x3))
+  }
+
+  pub fn forward_c(&self, x2: &Tensor, x3: &Tensor) -> Result<Tensor, candle_core::Error> {
+    let mut x3 = self.conv3_up.forward(x3)?;
+    x3 = leaky_relu(&x3, 0.1)?;
+    self.conv4.conv.forward(&(x2 + x3)?)
+  }
+
+  pub fn forward_d(&self, x1: &Tensor, x4: &Tensor) -> Result<Tensor, candle_core::Error> {
+    let mut x4 = self.conv4_up.forward(x4)?;
     x4 = leaky_relu(&x4, 0.1)?;
 
     let mut x5 = self.conv5.forward(&(x1 + x4)?)?;

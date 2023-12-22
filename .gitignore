@@ -3,3 +3,6 @@
 *.png
 *.webp
 *.jpg
+*.bmp
+
+/flamegraph.svg

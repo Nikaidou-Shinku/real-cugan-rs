@@ -43,3 +43,13 @@ impl Module for SeBlock {
     x.broadcast_mul(&x0)
   }
 }
+
+impl SeBlock {
+  pub fn forward_mean(&self, x: &Tensor, x0: &Tensor) -> Result<Tensor, candle_core::Error> {
+    let mut x0 = self.conv1.forward(&x0)?;
+    x0 = x0.relu()?;
+    x0 = self.conv2.forward(&x0)?;
+    x0 = sigmoid(&x0)?;
+    x.broadcast_mul(&x0)
+  }
+}

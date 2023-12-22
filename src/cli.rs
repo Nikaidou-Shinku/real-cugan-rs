@@ -14,10 +14,21 @@ pub struct Cli {
   #[arg(value_name = "OUTPUT")]
   pub output_path: PathBuf,
 
-  #[arg(short = 'c', long, help = "Use CPU instead of GPU for inference")]
+  #[arg(short = 'C', long, help = "Use CPU instead of GPU for inference")]
   pub use_cpu: bool,
 
   #[arg(short, long, help = "Filename of the model in `models` directory")]
   #[arg(value_name = "MODEL", default_value = "pro-no-denoise-up2x.pth")]
   pub model_name: PathBuf,
+
+  #[arg(short, long, help = "Please check the documentation for this option")]
+  #[arg(value_name = "ALPHA", default_value = "1.0")]
+  pub alpha: f64,
+
+  #[arg(short, long, help = "Tile size, smaller value can reduce memory usage")]
+  #[arg(value_name = "TILE")]
+  pub tile_size: Option<usize>,
+
+  #[arg(long, help = "Disable cache")]
+  pub no_cache: bool,
 }
