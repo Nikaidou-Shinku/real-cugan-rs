@@ -72,14 +72,23 @@ pub fn preprocess_alpha_channel(
     return Err("Failed to preprocess the alpha channel! `len % 4 != 0`");
   }
 
-  let (rgb, alpha): (Vec<[u8; 3]>, Vec<u8>) = raw
+  let (rgb, alpha): (Vec<[f32; 3]>, Vec<u8>) = raw
     .chunks_exact(4)
-    .map(|rgba| ([rgba[0], rgba[1], rgba[2]], rgba[3]))
+    .map(|rgba| {
+      let alpha = <u8 as Into<f32>>::into(rgba[3]) / 255.;
+
+      (
+        [
+          <u8 as Into<f32>>::into(rgba[0]) * alpha,
+          <u8 as Into<f32>>::into(rgba[1]) * alpha,
+          <u8 as Into<f32>>::into(rgba[2]) * alpha,
+        ],
+        rgba[3],
+      )
+    })
     .unzip();
 
-  let rgb = rgb.into_iter().flatten().map(Into::into).collect();
-
-  Ok((rgb, Some(alpha)))
+  Ok((rgb.into_iter().flatten().collect(), Some(alpha)))
 }
 
 pub fn save_image(
@@ -94,11 +103,22 @@ pub fn save_image(
   let (buffer, color_type): (Vec<_>, _) = if let Some(alpha) = alpha {
     (
       rgb
-        .into_iter()
-        .map(|v| v.clamp(0., 255.) as u8)
-        .array_chunks::<3>()
+        .chunks_exact(3)
         .zip(alpha)
-        .map(|(x, y)| [x[0], x[1], x[2], y])
+        .map(|(x, y)| {
+          if y == 0 {
+            [0, 0, 0, 0]
+          } else {
+            let inv: f32 = 255. / <u8 as Into<f32>>::into(y);
+
+            [
+              (x[0] * inv).clamp(0., 255.) as u8,
+              (x[1] * inv).clamp(0., 255.) as u8,
+              (x[2] * inv).clamp(0., 255.) as u8,
+              y,
+            ]
+          }
+        })
         .flatten()
         .collect(),
       ColorType::Rgba8,

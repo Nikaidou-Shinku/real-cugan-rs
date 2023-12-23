@@ -1,5 +1,3 @@
-#![feature(iter_array_chunks)]
-
 mod cli;
 mod model;
 mod setup;
