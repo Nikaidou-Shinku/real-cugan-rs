@@ -130,7 +130,7 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 [[package]]
 name = "candle-core"
 version = "0.3.2"
-source = "git+https://github.com/huggingface/candle.git#ba1fae590ee059d05ea421ec8072bd3e07ba9d40"
+source = "git+https://github.com/huggingface/candle.git#88589d88153bef3316a13741bd12bf5e7963957a"
 dependencies = [
  "byteorder",
  "candle-kernels",
@@ -152,7 +152,7 @@ dependencies = [
 [[package]]
 name = "candle-kernels"
 version = "0.3.2"
-source = "git+https://github.com/huggingface/candle.git#ba1fae590ee059d05ea421ec8072bd3e07ba9d40"
+source = "git+https://github.com/huggingface/candle.git#88589d88153bef3316a13741bd12bf5e7963957a"
 dependencies = [
  "anyhow",
  "glob",
@@ -162,7 +162,7 @@ dependencies = [
 [[package]]
 name = "candle-nn"
 version = "0.3.2"
-source = "git+https://github.com/huggingface/candle.git#ba1fae590ee059d05ea421ec8072bd3e07ba9d40"
+source = "git+https://github.com/huggingface/candle.git#88589d88153bef3316a13741bd12bf5e7963957a"
 dependencies = [
  "candle-core",
  "half",
