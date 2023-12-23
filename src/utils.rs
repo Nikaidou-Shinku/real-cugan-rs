@@ -85,51 +85,50 @@ pub fn preprocess_alpha_channel(
 pub fn save_image(
   width: u32,
   height: u32,
-  rgb: Vec<Vec<Vec<f32>>>,
+  rgb: Vec<f32>,
   alpha: Option<Vec<u8>>,
   path: impl AsRef<Path>,
+  format: ImageFormat,
+  lossless: bool,
 ) -> Result<(), &'static str> {
-  let color_type = if alpha.is_some() {
-    ColorType::Rgba8
+  let (buffer, color_type): (Vec<_>, _) = if let Some(alpha) = alpha {
+    (
+      rgb
+        .into_iter()
+        .map(|v| v.clamp(0., 255.) as u8)
+        .array_chunks::<3>()
+        .zip(alpha)
+        .map(|(x, y)| [x[0], x[1], x[2], y])
+        .flatten()
+        .collect(),
+      ColorType::Rgba8,
+    )
   } else {
-    ColorType::Rgb8
-  };
-
-  let buffer: Vec<u8> = if let Some(alpha) = alpha {
-    rgb
-      .into_iter()
-      .flatten()
-      .flatten()
-      .map(|v| v.clamp(0., 255.) as u8)
-      .array_chunks::<3>()
-      .zip(alpha)
-      .map(|(x, y)| [x[0], x[1], x[2], y])
-      .flatten()
-      .collect()
-  } else {
-    rgb
-      .into_iter()
-      .flatten()
-      .flatten()
-      .map(|v| v.clamp(0., 255.) as u8)
-      .collect()
+    (
+      rgb.into_iter().map(|v| v.clamp(0., 255.) as u8).collect(),
+      ColorType::Rgb8,
+    )
   };
 
   tracing::info!("Convert the tensor to image");
 
-  let path = path.as_ref();
-
   let mut buffered_file_write =
     BufWriter::new(File::create(path).map_err(|_| "Failed to create output image file")?);
 
-  match ImageFormat::from_path(path)
-    .map_err(|_| "Failed to get image format from the output path")?
-  {
+  match format {
     ImageFormat::Bmp => {
+      if !lossless {
+        tracing::warn!("BMP images cannot be lossy, output lossless result...");
+      }
+
       BmpEncoder::new(&mut buffered_file_write).write_image(&buffer, width, height, color_type)
     }
 
     ImageFormat::Jpeg => {
+      if lossless {
+        return Err("JPEG images cannot be lossless");
+      }
+
       if color_type == ColorType::Rgba8 {
         return Err("Images in JPEG format cannot save transparent layers!");
       }
@@ -138,17 +137,28 @@ pub fn save_image(
         .write_image(&buffer, width, height, color_type)
     }
 
-    ImageFormat::Png => PngEncoder::new_with_quality(
+    ImageFormat::Png => {
+      if !lossless {
+        tracing::warn!("PNG images cannot be lossy, output lossless result...");
+      }
+
+      PngEncoder::new_with_quality(
+        buffered_file_write,
+        png::CompressionType::Fast,
+        png::FilterType::Adaptive,
+      )
+      .write_image(&buffer, width, height, color_type)
+    }
+
+    ImageFormat::WebP => WebPEncoder::new_with_quality(
       buffered_file_write,
-      png::CompressionType::Best,
-      png::FilterType::Adaptive,
+      if lossless {
+        webp::WebPQuality::lossless()
+      } else {
+        webp::WebPQuality::lossy(100)
+      },
     )
     .write_image(&buffer, width, height, color_type),
-
-    ImageFormat::WebP => {
-      WebPEncoder::new_with_quality(buffered_file_write, webp::WebPQuality::lossless())
-        .write_image(&buffer, width, height, color_type)
-    }
 
     _ => {
       return Err("Unsupported output image format");

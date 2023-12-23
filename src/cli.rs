@@ -25,10 +25,16 @@ pub struct Cli {
   #[arg(value_name = "ALPHA", default_value = "1.0")]
   pub alpha: f64,
 
-  #[arg(short, long, help = "Tile size, smaller value can reduce memory usage")]
+  #[arg(short, long, help = "Tile size, smaller value may reduce memory usage")]
   #[arg(value_name = "TILE")]
   pub tile_size: Option<usize>,
 
-  #[arg(long, help = "Disable cache")]
+  #[arg(
+    long,
+    help = "Disable cache, which increases runtime but reduce memory usage"
+  )]
   pub no_cache: bool,
+
+  #[arg(short, long, help = "Output lossless encoded image")]
+  pub lossless: bool,
 }

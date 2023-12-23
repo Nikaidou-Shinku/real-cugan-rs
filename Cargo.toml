@@ -22,11 +22,12 @@ tracing-subscriber = { version = "0.3.18", features = ["parking_lot"] }
 [dependencies.candle-core]
 git = "https://github.com/huggingface/candle.git"
 version = "0.3.2"
-features = ["cuda"]
+features = ["cuda", "cudnn"]
 
 [dependencies.candle-nn]
 git = "https://github.com/huggingface/candle.git"
 version = "0.3.2"
+features = ["cuda"]
 
 [dependencies.image]
 version = "0.24.7"

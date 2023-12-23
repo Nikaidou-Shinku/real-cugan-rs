@@ -10,13 +10,13 @@ use std::env;
 use candle_core::{DType, Device, Module, Tensor};
 use candle_nn::VarBuilder;
 use clap::Parser;
-use image::{io::Reader as ImageReader, DynamicImage};
+use image::{io::Reader as ImageReader, DynamicImage, ImageFormat};
 use resize::Pixel;
 use rgb::FromSlice;
 
 use cli::Cli;
 use model::UpCunet2x;
-use setup::setup_tracing;
+use setup::{setup_args, setup_tracing};
 use utils::{preprocess_alpha_channel, save_image};
 
 fn main() -> Result<(), candle_core::Error> {
@@ -24,9 +24,13 @@ fn main() -> Result<(), candle_core::Error> {
 
   let args = Cli::parse();
 
-  if args.no_cache && args.tile_size.is_none() {
-    tracing::warn!("Cache only works with tile mode! Ignoring `--no-cache`...");
-  }
+  let image_format = match setup_args(&args) {
+    Ok(res) => res,
+    Err(err) => {
+      tracing::error!("{err}");
+      return Ok(());
+    }
+  };
 
   let device = if args.use_cpu {
     Device::Cpu
@@ -78,6 +82,11 @@ fn main() -> Result<(), candle_core::Error> {
   };
 
   if alpha.is_some() {
+    if image_format == ImageFormat::Jpeg {
+      tracing::error!("Images in JPEG format cannot save transparent layers!");
+      return Ok(());
+    }
+
     tracing::info!("Alpha channel preprocessed");
   }
 
@@ -131,7 +140,7 @@ fn main() -> Result<(), candle_core::Error> {
     dst
   });
 
-  let res: Vec<Vec<Vec<f32>>> = res.to_vec3()?;
+  let res: Vec<f32> = res.flatten_all()?.to_vec1()?;
 
   if let Err(msg) = save_image(
     (width * 2).try_into()?,
@@ -139,6 +148,8 @@ fn main() -> Result<(), candle_core::Error> {
     res,
     alpha,
     &args.output_path,
+    image_format,
+    args.lossless,
   ) {
     tracing::error!(msg, "Failed to save image");
   } else {
