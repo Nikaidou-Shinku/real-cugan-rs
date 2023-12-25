@@ -61,10 +61,23 @@ fn main() -> Result<(), candle_core::Error> {
 
   tracing::info!(width, height, "Image file read");
 
+  let device = if args.use_cpu {
+    Device::Cpu
+  } else {
+    Device::new_cuda(0)?
+  };
+
+  tracing::info!(?device, "Setup device");
+
+  // TODO: Reduce redundancy here
   let (rgb, alpha) = match img {
     DynamicImage::ImageRgb8(img) => {
       tracing::info!("No alpha channel found");
-      (img.into_raw().into_iter().map(Into::into).collect(), None)
+
+      (
+        Tensor::from_vec(img.into_raw(), (height, width, 3), &device)?.to_dtype(DType::F32)?,
+        None,
+      )
     }
     DynamicImage::ImageRgba8(img) => {
       if output_format == ImageFormat::Jpeg {
@@ -74,80 +87,39 @@ fn main() -> Result<(), candle_core::Error> {
 
       tracing::info!("Preprocess the alpha channel...");
 
-      match preprocess_alpha_channel(img) {
-        Ok(res) => res,
-        Err(msg) => {
-          tracing::error!("{msg}");
-          return Ok(());
-        }
-      }
+      let data = Tensor::from_vec(img.into_raw(), (height, width, 4), &device)?;
+      let (rgb, alpha) = preprocess_alpha_channel(&data)?;
+      (rgb, Some(alpha))
     }
     others => {
       if output_format == ImageFormat::Jpeg {
         tracing::warn!("The output format is JPEG, Convert into RGB...");
         let img = others.to_rgb8();
 
-        (img.into_raw().into_iter().map(Into::into).collect(), None)
+        (
+          Tensor::from_vec(img.into_raw(), (height, width, 3), &device)?.to_dtype(DType::F32)?,
+          None,
+        )
       } else {
         tracing::warn!("Convert into RGBA...");
         let img = others.to_rgba8();
 
         tracing::info!("Preprocess the alpha channel...");
-        match preprocess_alpha_channel(img) {
-          Ok(res) => res,
-          Err(msg) => {
-            tracing::error!("{msg}");
-            return Ok(());
-          }
-        }
+
+        let data = Tensor::from_vec(img.into_raw(), (height, width, 4), &device)?;
+        let (rgb, alpha) = preprocess_alpha_channel(&data)?;
+        (rgb, Some(alpha))
       }
     }
   };
 
-  if alpha.is_some() {
-    tracing::info!("Alpha channel preprocessed");
-  }
-
-  let device = if args.use_cpu {
-    Device::Cpu
-  } else {
-    Device::new_cuda(0)?
-  };
-
-  tracing::info!(?device, "Setup device");
-
-  let data = Tensor::from_vec(rgb, (height, width, 3), &device)?
-    .permute((2, 0, 1))?
-    .unsqueeze(0)?;
+  let data = rgb.permute((2, 0, 1))?.unsqueeze(0)?;
   let data = ((data / (255. / 0.7))? + 0.15)?; // for pro model
 
-  tracing::info!("Preprocess the rgb channel into tensor");
-
-  let vb = VarBuilder::from_pth(model_path, DType::F32, &device)?;
-  let model = match args.scale {
-    2 => RealCugan::X2(UpCunet2x::new(
-      3,
-      3,
-      args.alpha,
-      args.tile_size,
-      !args.no_cache,
-      vb,
-    )?),
-    3 => RealCugan::X3(UpCunet3x::new(3, 3, args.alpha, args.tile_size, vb)?),
-    _ => {
-      tracing::error!(scale = args.scale, "Unsupported upscale ratio");
-      return Ok(());
-    }
-  };
-
-  tracing::info!("Network built");
-
-  let res = model.forward(&data)?;
-  let res = ((res - 0.15)? * (255. / 0.7))?.round()?; // for pro model
-  let res = res.squeeze(0)?.permute((1, 2, 0))?;
-  let res: Vec<f32> = res.flatten_all()?.to_vec1()?;
-
-  tracing::info!("Rgb channel processed");
+  tracing::info!(
+    has_alpha = alpha.is_some(),
+    "Preprocess the image into tensor",
+  );
 
   let (target_width, target_height) = {
     let scale: usize = args.scale.into();
@@ -176,19 +148,44 @@ fn main() -> Result<(), candle_core::Error> {
     dst
   });
 
-  if let Err(msg) = save_image(
-    target_width.try_into()?,
-    target_height.try_into()?,
-    res,
+  let vb = VarBuilder::from_pth(model_path, DType::F32, &device)?;
+  let model = match args.scale {
+    2 => RealCugan::X2(UpCunet2x::new(
+      3,
+      3,
+      args.alpha,
+      args.tile_size,
+      !args.no_cache,
+      vb,
+    )?),
+    3 => RealCugan::X3(UpCunet3x::new(3, 3, args.alpha, args.tile_size, vb)?),
+    _ => {
+      tracing::error!(scale = args.scale, "Unsupported upscale ratio");
+      return Ok(());
+    }
+  };
+
+  tracing::info!("Network built");
+
+  let res = model.forward(&data)?;
+  drop(data);
+
+  tracing::info!("Real-CUGAN finished");
+
+  let res = ((res - 0.15)? * (255. / 0.7))?.round()?; // for pro model
+  let res = res.squeeze(0)?.permute((1, 2, 0))?;
+
+  save_image(
+    target_width,
+    target_height,
+    &res,
     alpha,
     &args.output_path,
     output_format,
     args.lossless,
-  ) {
-    tracing::error!(msg, "Failed to save image");
-  } else {
-    tracing::info!(path = ?args.output_path, "Image saved");
-  }
+  )?;
+
+  tracing::info!(path = ?args.output_path, "Image saved");
 
   Ok(())
 }

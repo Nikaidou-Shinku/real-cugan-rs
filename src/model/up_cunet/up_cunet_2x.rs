@@ -77,6 +77,7 @@ impl Module for UpCunet2x {
 }
 
 impl UpCunet2x {
+  // TODO: some optimization
   fn forward_tile(&self, x: &Tensor, tile_size: usize) -> Result<Tensor, candle_core::Error> {
     let (_, _, h0, w0) = x.shape().dims4()?;
 
@@ -93,7 +94,8 @@ impl UpCunet2x {
     let (n, c, h, w) = x.shape().dims4()?;
 
     // FIXME: we will have this Vec even if cache disabled
-    let mut cache: Vec<SmallVec<[Tensor; 4]>> = Vec::with_capacity(h_tiles * w_tiles);
+    let mut cache: Vec<SmallVec<[Tensor; 4]>> =
+      Vec::with_capacity(if self.use_cache { h_tiles * w_tiles } else { 0 });
 
     let tile_num: u32 = (h_tiles * w_tiles).try_into()?;
     let tile_num: f64 = tile_num.into();

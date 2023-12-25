@@ -12,6 +12,9 @@ pub fn setup_tracing() {
     .finish();
 
   tracing::subscriber::set_global_default(subscriber).expect("Setting default subscriber failed");
+
+  const STARTUP_INFO: &str = concat!("Real-CUGAN-rs v", env!("CARGO_PKG_VERSION"));
+  tracing::info!("{STARTUP_INFO}");
 }
 
 pub fn setup_args(args: &Cli) -> Result<ImageFormat, &'static str> {

@@ -1,6 +1,6 @@
 use std::{fs::File, io::BufWriter, path::Path};
 
-use candle_core::{shape::Dim, Tensor};
+use candle_core::{shape::Dim, DType, Tensor};
 use image::{
   codecs::{
     bmp::BmpEncoder,
@@ -8,7 +8,7 @@ use image::{
     png::{self, PngEncoder},
     webp::{self, WebPEncoder},
   },
-  ColorType, ImageEncoder, ImageFormat, RgbaImage,
+  ColorType, ImageEncoder, ImageFormat,
 };
 
 pub trait TensorExt {
@@ -63,75 +63,51 @@ impl TensorExt for Tensor {
   }
 }
 
-pub fn preprocess_alpha_channel(
-  image: RgbaImage,
-) -> Result<(Vec<f32>, Option<Vec<u8>>), &'static str> {
-  let raw = image.into_raw();
+pub fn preprocess_alpha_channel(data: &Tensor) -> Result<(Tensor, Vec<u8>), candle_core::Error> {
+  let rgb = data.narrow(2, 0, 3)?.to_dtype(DType::F32)?;
+  let alpha = data.narrow(2, 3, 1)?;
 
-  if raw.len() % 4 != 0 {
-    return Err("Failed to preprocess the alpha channel! `len % 4 != 0`");
-  }
+  let raw_alpha: Vec<u8> = alpha.flatten_all()?.to_vec1()?;
+  let alpha_mask = (Tensor::cat(&[&alpha, &alpha, &alpha], 2)?.to_dtype(DType::F32)? / 255.)?;
 
-  let (rgb, alpha): (Vec<[f32; 3]>, Vec<u8>) = raw
-    .chunks_exact(4)
-    .map(|rgba| {
-      let alpha = <u8 as Into<f32>>::into(rgba[3]) / 255.;
-
-      (
-        [
-          <u8 as Into<f32>>::into(rgba[0]) * alpha,
-          <u8 as Into<f32>>::into(rgba[1]) * alpha,
-          <u8 as Into<f32>>::into(rgba[2]) * alpha,
-        ],
-        rgba[3],
-      )
-    })
-    .unzip();
-
-  Ok((rgb.into_iter().flatten().collect(), Some(alpha)))
+  return Ok(((rgb * alpha_mask)?, raw_alpha));
 }
 
 pub fn save_image(
-  width: u32,
-  height: u32,
-  rgb: Vec<f32>,
+  width: usize,
+  height: usize,
+  rgb: &Tensor,
   alpha: Option<Vec<u8>>,
   path: impl AsRef<Path>,
   format: ImageFormat,
   lossless: bool,
-) -> Result<(), &'static str> {
-  let (buffer, color_type): (Vec<_>, _) = if let Some(alpha) = alpha {
-    (
-      rgb
-        .chunks_exact(3)
-        .zip(alpha)
-        .map(|(x, y)| {
-          if y == 0 {
-            [0, 0, 0, 0]
-          } else {
-            let inv: f32 = 255. / <u8 as Into<f32>>::into(y);
+) -> Result<(), candle_core::Error> {
+  let (buffer, color_type) = if let Some(alpha) = alpha {
+    let alpha = Tensor::from_vec(alpha, (height, width, 1), rgb.device())?;
+    let alpha_mask = (255. / Tensor::cat(&[&alpha, &alpha, &alpha], 2)?.to_dtype(DType::F32)?)?;
 
-            [
-              (x[0] * inv).clamp(0., 255.) as u8,
-              (x[1] * inv).clamp(0., 255.) as u8,
-              (x[2] * inv).clamp(0., 255.) as u8,
-              y,
-            ]
-          }
-        })
-        .flatten()
-        .collect(),
+    let rgb = (rgb * alpha_mask)?.clamp(0., 255.)?.to_dtype(DType::U8)?;
+
+    (
+      Tensor::cat(&[rgb, alpha], 2)?.flatten_all()?.to_vec1()?,
       ColorType::Rgba8,
     )
   } else {
     (
-      rgb.into_iter().map(|v| v.clamp(0., 255.) as u8).collect(),
+      rgb
+        .clamp(0., 255.)?
+        .to_dtype(DType::U8)?
+        .flatten_all()?
+        .to_vec1()?,
       ColorType::Rgb8,
     )
   };
 
+  let width = width.try_into()?;
+  let height = height.try_into()?;
+
   let mut buffered_file_write =
-    BufWriter::new(File::create(path).map_err(|_| "Failed to create output image file")?);
+    BufWriter::new(File::create(path).expect("Failed to create output image file"));
 
   match format {
     ImageFormat::Bmp => {
@@ -144,11 +120,11 @@ pub fn save_image(
 
     ImageFormat::Jpeg => {
       if lossless {
-        return Err("JPEG images cannot be lossless");
+        panic!("JPEG images cannot be lossless");
       }
 
       if color_type == ColorType::Rgba8 {
-        return Err("Images in JPEG format cannot save transparent layers!");
+        panic!("Images in JPEG format cannot save transparent layers!");
       }
 
       JpegEncoder::new_with_quality(buffered_file_write, 100)
@@ -179,10 +155,10 @@ pub fn save_image(
     .write_image(&buffer, width, height, color_type),
 
     _ => {
-      return Err("Unsupported output image format");
+      panic!("Unsupported output image format");
     }
   }
-  .map_err(|_| "Failed to encode image & write to file")?;
+  .expect("Failed to encode image & write to file");
 
   Ok(())
 }
