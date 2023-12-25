@@ -130,8 +130,6 @@ pub fn save_image(
     )
   };
 
-  tracing::info!("Convert the tensor to image");
-
   let mut buffered_file_write =
     BufWriter::new(File::create(path).map_err(|_| "Failed to create output image file")?);
 

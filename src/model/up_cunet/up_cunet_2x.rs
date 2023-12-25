@@ -24,7 +24,7 @@ impl UpCunet2x {
     use_cache: bool,
     vb: VarBuilder,
   ) -> Result<Self, candle_core::Error> {
-    let unet1 = UNet1::new(in_channels, out_channels, true, vb.pp("unet1"))?;
+    let unet1 = UNet1::new(in_channels, out_channels, true, false, vb.pp("unet1"))?;
     let unet2 = UNet2::new(in_channels, out_channels, false, alpha, vb.pp("unet2"))?;
 
     if let Some(tile_size) = tile_size {
@@ -72,7 +72,7 @@ impl Module for UpCunet2x {
       x = x.narrow(3, 0, w0 * 2)?.narrow(2, 0, h0 * 2)?;
     }
 
-    ((x - 0.15)? * (255. / 0.7))?.round()
+    Ok(x)
   }
 }
 
@@ -307,7 +307,7 @@ impl UpCunet2x {
             (i * 2)..(i * 2 + tile_size * 2),
             (j * 2)..(j * 2 + tile_size * 2),
           ],
-          &((x_crop - 0.15)? * (255. / 0.7))?.round()?,
+          &x_crop,
         )?;
       }
     }

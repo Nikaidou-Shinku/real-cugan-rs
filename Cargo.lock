@@ -130,7 +130,7 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 [[package]]
 name = "candle-core"
 version = "0.3.2"
-source = "git+https://github.com/huggingface/candle.git#88589d88153bef3316a13741bd12bf5e7963957a"
+source = "git+https://github.com/huggingface/candle.git#37c539f2b7dfc8aa67a10b611dc12e5e0428be00"
 dependencies = [
  "byteorder",
  "candle-kernels",
@@ -152,7 +152,7 @@ dependencies = [
 [[package]]
 name = "candle-kernels"
 version = "0.3.2"
-source = "git+https://github.com/huggingface/candle.git#88589d88153bef3316a13741bd12bf5e7963957a"
+source = "git+https://github.com/huggingface/candle.git#37c539f2b7dfc8aa67a10b611dc12e5e0428be00"
 dependencies = [
  "anyhow",
  "glob",
@@ -162,7 +162,7 @@ dependencies = [
 [[package]]
 name = "candle-nn"
 version = "0.3.2"
-source = "git+https://github.com/huggingface/candle.git#88589d88153bef3316a13741bd12bf5e7963957a"
+source = "git+https://github.com/huggingface/candle.git#37c539f2b7dfc8aa67a10b611dc12e5e0428be00"
 dependencies = [
  "candle-core",
  "half",
@@ -1011,18 +1011,18 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "1.0.51"
+version = "1.0.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f11c217e1416d6f036b870f14e0413d480dbf28edbee1f877abaf0206af43bb7"
+checksum = "83a48fd946b02c0a526b2e9481c8e2a17755e47039164a86c4070446e3a4614d"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.51"
+version = "1.0.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01742297787513b79cf8e29d1056ede1313e2420b7b3b15d0a768b4921f549df"
+checksum = "e7fbe9b594d6568a6a1443250a7e67d80b74e1e96f6d1715e1e21cc1888291d3"
 dependencies = [
  "proc-macro2",
  "quote",

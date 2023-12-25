@@ -8,7 +8,7 @@ A Rust port of [Real-CUGAN](https://github.com/bilibili/ailab/tree/main/Real-CUG
 
 ### Usages
 
-Upscale `input.png` and save it to `output.png`:
+Upscale `input.png` to 2x and save it to `output.png`:
 
 ```shell
 real-cugan-rs -i input.png -o output.png
@@ -22,23 +22,24 @@ A Rust port of Real-CUGAN
 Usage: real-cugan-rs [OPTIONS] --input-path <INPUT> --output-path <OUTPUT>
 
 Options:
-  -i, --input-path <INPUT>    Input image path
-  -o, --output-path <OUTPUT>  Output image path
-  -C, --use-cpu               Use CPU instead of GPU for inference
-  -m, --model-name <MODEL>    Filename of the model in `models` directory [default: pro-no-denoise-up2x.pth]
-  -a, --alpha <ALPHA>         Please check the documentation for this option [default: 1.0]
-  -t, --tile-size <TILE>      Tile size, smaller value may reduce memory usage
-      --no-cache              Disable cache, which increases runtime but reduce memory usage
-  -l, --lossless              Output lossless encoded image
-  -h, --help                  Print help
-  -V, --version               Print version
+  -i, --input-path <INPUT>       Input image path
+  -o, --output-path <OUTPUT>     Output image path
+  -s, --scale <SCALE>            Upscale ratio (2/3) [default: 2]
+  -d, --denoise-level <DENOISE>  Denoise level (-1/0/3), -1 for conservative model [default: 0]
+  -l, --lossless                 Output lossless encoded image
+  -t, --tile-size <TILE>         Tile size, smaller value may reduce memory usage
+      --no-cache                 Disable cache, which increases runtime but reduce memory usage
+  -C, --use-cpu                  Use CPU instead of GPU for inference
+  -a, --alpha <ALPHA>            Please check the documentation for this option [default: 1.0]
+  -h, --help                     Print help
+  -V, --version                  Print version
 ```
 
 Supported image formats: BMP, JPEG, PNG, WebP.
 
 ### Note
 
-- Currently only 2x upscale of the pro model is supported.
+- Currently only the pro model is supported.
 - Currently GPU inference only supports NVIDIA graphics cards through CUDA and cuDNN.
 - Considering the encoding speed, WebP outputs lossy compressed images by default. If you need lossless compression, please add `--lossless` or `-l`.
 - Explanation of _the alpha option_: `该值越大 AI 修复程度、痕迹越小，越模糊；alpha 越小处理越烈，越锐化，色偏（对比度、饱和度增强）越大；默认为 1.0 不调整，推荐调整区间 (0.7, 1.3)`.

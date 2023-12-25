@@ -8,7 +8,7 @@
 
 ### 使用方法
 
-将 `input.png` 超分后保存到 `output.png`：
+将 `input.png` 超分 2 倍后保存到 `output.png`：
 
 ```shell
 real-cugan-rs -i input.png -o output.png
@@ -22,23 +22,24 @@ A Rust port of Real-CUGAN
 Usage: real-cugan-rs [OPTIONS] --input-path <INPUT> --output-path <OUTPUT>
 
 Options:
-  -i, --input-path <INPUT>    Input image path
-  -o, --output-path <OUTPUT>  Output image path
-  -C, --use-cpu               Use CPU instead of GPU for inference
-  -m, --model-name <MODEL>    Filename of the model in `models` directory [default: pro-no-denoise-up2x.pth]
-  -a, --alpha <ALPHA>         Please check the documentation for this option [default: 1.0]
-  -t, --tile-size <TILE>      Tile size, smaller value may reduce memory usage
-      --no-cache              Disable cache, which increases runtime but reduce memory usage
-  -l, --lossless              Output lossless encoded image
-  -h, --help                  Print help
-  -V, --version               Print version
+  -i, --input-path <INPUT>       Input image path
+  -o, --output-path <OUTPUT>     Output image path
+  -s, --scale <SCALE>            Upscale ratio (2/3) [default: 2]
+  -d, --denoise-level <DENOISE>  Denoise level (-1/0/3), -1 for conservative model [default: 0]
+  -l, --lossless                 Output lossless encoded image
+  -t, --tile-size <TILE>         Tile size, smaller value may reduce memory usage
+      --no-cache                 Disable cache, which increases runtime but reduce memory usage
+  -C, --use-cpu                  Use CPU instead of GPU for inference
+  -a, --alpha <ALPHA>            Please check the documentation for this option [default: 1.0]
+  -h, --help                     Print help
+  -V, --version                  Print version
 ```
 
 支持的图片格式：BMP、JPEG、PNG、WebP。
 
 ### 注意事项
 
-- 目前仅支持 pro 模型的 2 倍超分。
+- 目前仅支持 pro 模型。
 - 目前 GPU 推理仅通过 CUDA 和 cuDNN 支持 NVIDIA 显卡。
 - 考虑到编码速度，WebP 默认输出有损压缩图片，如果你需要无损压缩，请使用 `--lossless` 或 `-l`。
 - 关于 *alpha 参数*的解释：`该值越大 AI 修复程度、痕迹越小，越模糊；alpha 越小处理越烈，越锐化，色偏（对比度、饱和度增强）越大；默认为 1.0 不调整，推荐调整区间 (0.7, 1.3)`。

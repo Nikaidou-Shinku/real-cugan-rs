@@ -20,6 +20,7 @@ impl UNet1 {
     in_channels: usize,
     out_channels: usize,
     deconv: bool,
+    for_x3: bool,
     vb: VarBuilder,
   ) -> Result<Self, candle_core::Error> {
     let conv1 = UNetConv::new(in_channels, 32, 64, false, vb.pp("conv1"))?;
@@ -56,11 +57,11 @@ impl UNet1 {
       ConvBottom::Deconv(conv_transpose2d(
         64,
         out_channels,
-        4,
+        if for_x3 { 5 } else { 4 },
         ConvTranspose2dConfig {
-          padding: 3,
+          padding: if for_x3 { 2 } else { 3 },
           output_padding: 0,
-          stride: 2,
+          stride: if for_x3 { 3 } else { 2 },
           dilation: 1,
         },
         vb.pp("conv_bottom"),
