@@ -158,7 +158,14 @@ fn main() -> Result<(), candle_core::Error> {
       !args.no_cache,
       vb,
     )?),
-    3 => RealCugan::X3(UpCunet3x::new(3, 3, args.alpha, args.tile_size, vb)?),
+    3 => RealCugan::X3(UpCunet3x::new(
+      3,
+      3,
+      args.alpha,
+      args.tile_size,
+      !args.no_cache,
+      vb,
+    )?),
     _ => {
       tracing::error!(scale = args.scale, "Unsupported upscale ratio");
       return Ok(());
