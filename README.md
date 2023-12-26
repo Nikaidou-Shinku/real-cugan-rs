@@ -28,6 +28,8 @@ Options:
   -d, --denoise-level <DENOISE>  Denoise level (-1/0/3), -1 for conservative model [default: 0]
   -l, --lossless                 Output lossless encoded image
   -t, --tile-size <TILE>         Tile size, smaller value may reduce memory usage
+  -W, --width <WIDTH>            After Real-CUGAN, resample to target width
+  -H, --height <HEIGHT>          After Real-CUGAN, resample to target height
       --no-cache                 Disable cache, which increases runtime but reduce memory usage
   -C, --use-cpu                  Use CPU instead of GPU for inference
   -a, --alpha <ALPHA>            Please check the documentation for this option [default: 1.0]
@@ -42,13 +44,15 @@ Supported image formats: BMP, JPEG, PNG, WebP.
 - Currently only the pro model is supported.
 - Currently GPU inference only supports NVIDIA graphics cards through CUDA and cuDNN.
 - Considering the encoding speed, WebP outputs lossy compressed images by default. If you need lossless compression, please add `--lossless` or `-l`.
-- Explanation of _the alpha option_: `该值越大 AI 修复程度、痕迹越小，越模糊；alpha 越小处理越烈，越锐化，色偏（对比度、饱和度增强）越大；默认为 1.0 不调整，推荐调整区间 (0.7, 1.3)`.
 - Explanation of _the tile size option_: After specifying tile size through `--tile-size` or `-t`, the image will be divided into small blocks with a length not exceeding the tile size for inference.
   - This will **significantly reduce the memory usage**. Generally, the smaller the tile size, the smaller the memory usage will be, but at the same time **the inference time will become longer**.
   - Note that the tile size should not be too small, and it is generally recommended not to be less than 32.
   - When tile size is not specified, the entire image will be used directly for inference.
+- Explanation on the _width option_ and _height option_: If width and height are specified, after used Real-CUGAN, Lanczos3 would be used to resample to the target resolution.
+  - If only one of width and height is specified, the other one will be calculated based on the aspect ratio of the original image.
 - Explanation on _cache_: If the memory is still insufficient after adjusting the tile size, you can consider disabling the cache through `--no-cache`.
   - This will **significantly reduce the memory usage**. After disabling caching, as long as the tile size is small enough, generally 1.5GiB of video memory can handle images of any resolution.
   - Disabling caching will **significantly increase inference time**, typically to 2 to 3 times that with caching enabled.
   - This option is ignored when tile size is not specified.
+- Explanation of _the alpha option_: `该值越大 AI 修复程度、痕迹越小，越模糊；alpha 越小处理越烈，越锐化，色偏（对比度、饱和度增强）越大；默认为 1.0 不调整，推荐调整区间 (0.7, 1.3)`.
 - **PRs are welcome!**

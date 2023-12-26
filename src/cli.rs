@@ -33,6 +33,18 @@ pub struct Cli {
   #[arg(value_name = "TILE")]
   pub tile_size: Option<usize>,
 
+  #[arg(short = 'W', long, help = "After Real-CUGAN, resample to target width")]
+  #[arg(value_name = "WIDTH")]
+  pub width: Option<usize>,
+
+  #[arg(
+    short = 'H',
+    long,
+    help = "After Real-CUGAN, resample to target height"
+  )]
+  #[arg(value_name = "HEIGHT")]
+  pub height: Option<usize>,
+
   #[arg(
     long,
     help = "Disable cache, which increases runtime but reduce memory usage"

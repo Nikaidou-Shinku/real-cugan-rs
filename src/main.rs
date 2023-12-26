@@ -18,9 +18,9 @@ use setup::{setup_args, setup_tracing};
 use utils::{preprocess_alpha_channel, save_image};
 
 fn main() -> Result<(), candle_core::Error> {
-  setup_tracing();
-
   let args = Cli::parse();
+
+  setup_tracing();
 
   let output_format = match setup_args(&args) {
     Ok(res) => res,
@@ -121,9 +121,20 @@ fn main() -> Result<(), candle_core::Error> {
     "Preprocess the image into tensor",
   );
 
-  let (target_width, target_height) = {
-    let scale: usize = args.scale.into();
-    (width * scale, height * scale)
+  let (target_width, target_height) = match (args.width, args.height) {
+    (Some(w), Some(h)) => (w, h),
+    (Some(w), None) => {
+      let h = (w * height) as f64 / width as f64;
+      (w, h.round() as usize)
+    }
+    (None, Some(h)) => {
+      let w = (h * width) as f64 / height as f64;
+      (w.round() as usize, h)
+    }
+    _ => {
+      let scale: usize = args.scale.into();
+      (width * scale, height * scale)
+    }
   };
 
   let alpha = alpha.map(|alpha| {
@@ -181,6 +192,37 @@ fn main() -> Result<(), candle_core::Error> {
 
   let res = ((res - 0.15)? * (255. / 0.7))?.round()?; // for pro model
   let res = res.squeeze(0)?.permute((1, 2, 0))?;
+
+  let cur_width = res.dim(1)?;
+  let cur_height = res.dim(0)?;
+
+  let res = if cur_width == target_width && cur_height == target_height {
+    tracing::info!("Skip resampling");
+    res
+  } else {
+    let mut resizer = resize::new(
+      cur_width,
+      cur_height,
+      target_width,
+      target_height,
+      Pixel::RGBF32,
+      resize::Type::Lanczos3,
+    )
+    .expect("Failed to initialize the target resizer");
+
+    let src = res.flatten_all()?.to_vec1()?;
+    drop(res);
+
+    let mut dst = vec![0.; target_width * target_height * 3];
+
+    resizer
+      .resize(src.as_rgb(), dst.as_rgb_mut())
+      .expect("Failed to resample the target image");
+
+    tracing::info!("Image resample to target");
+
+    Tensor::from_vec(dst, (target_height, target_width, 3), &device)?
+  };
 
   save_image(
     target_width,
