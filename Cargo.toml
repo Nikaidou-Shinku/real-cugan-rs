@@ -11,7 +11,7 @@ codegen-units = 1
 
 [dependencies]
 smallvec = "1.11.2"
-clap = { version = "4.4.11", features = ["derive"] }
+clap = { version = "4.4.13", features = ["derive"] }
 rgb = "0.8.37"
 resize = "0.8.3"
 
@@ -21,12 +21,12 @@ tracing-subscriber = { version = "0.3.18", features = ["parking_lot"] }
 
 [dependencies.candle-core]
 git = "https://github.com/huggingface/candle.git"
-version = "0.3.2"
+version = "0.3.3"
 features = ["cuda", "cudnn"]
 
 [dependencies.candle-nn]
 git = "https://github.com/huggingface/candle.git"
-version = "0.3.2"
+version = "0.3.3"
 features = ["cuda"]
 
 [dependencies.image]
