@@ -1,33 +1,8 @@
-[package]
-name = "real-cugan-rs"
-version = "0.4.0"
-edition = "2021"
-authors = ["yurzhang <yurzhang.oi@gmail.com>"]
+[workspace]
+resolver = "2"
+members = ["real-cugan-core", "real-cugan-cli"]
 
 [profile.release]
 strip = true
 lto = true
 codegen-units = 1
-
-[dependencies]
-smallvec = "1.13.1"
-clap = { version = "4.5.1", features = ["derive"] }
-rgb = "0.8.37"
-resize = "0.8.4"
-
-# logging
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["parking_lot"] }
-
-[dependencies.candle-core]
-git = "https://github.com/huggingface/candle.git"
-features = ["cuda", "cudnn"]
-
-[dependencies.candle-nn]
-git = "https://github.com/huggingface/candle.git"
-features = ["cuda"]
-
-[dependencies.image]
-version = "0.24.9"
-default-features = false
-features = ["bmp", "jpeg", "png", "webp", "webp-encoder"]

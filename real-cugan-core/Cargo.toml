@@ -1,0 +1,15 @@
+[package]
+name = "real-cugan-core"
+version = "0.4.0"
+edition = "2021"
+authors = ["yurzhang <yurzhang.oi@gmail.com>"]
+
+[dependencies.burn]
+git = "https://github.com/tracel-ai/burn.git"
+default-features = false
+features = ["std", "ndarray", "wgpu"]
+
+[dependencies.burn-import]
+git = "https://github.com/tracel-ai/burn.git"
+default-features = false
+features = ["pytorch"]

@@ -1,0 +1,8 @@
+[package]
+name = "real-cugan-cli"
+version = "0.4.0"
+edition = "2021"
+authors = ["yurzhang <yurzhang.oi@gmail.com>"]
+
+[dependencies]
+real-cugan-core = { path = "../real-cugan-core" }
