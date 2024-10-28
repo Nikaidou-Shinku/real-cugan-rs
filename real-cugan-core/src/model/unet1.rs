@@ -1,14 +1,10 @@
 use burn::{
-  config::Config,
-  module::Module,
   nn::conv::{Conv2d, Conv2dConfig, ConvTranspose2d, ConvTranspose2dConfig},
-  tensor::{backend::Backend, Tensor},
+  prelude::*,
+  tensor::activation::leaky_relu,
 };
 
-use super::{
-  unet_conv::{UNetConv, UNetConvConfig},
-  utils::{leaky_relu, ConvBottom, ConvBottomRecord},
-};
+use super::{ConvBottom, ConvBottomConfig, UNetConv, UNetConvConfig};
 
 #[derive(Debug, Module)]
 pub struct UNet1<B: Backend> {
@@ -25,8 +21,10 @@ impl<B: Backend> UNet1<B> {
     let x1 = self.conv1.forward(x);
     let x2 = self.conv1_down.forward(x1.clone());
 
-    let [_, _, h, w] = x1.dims();
-    let x1 = x1.narrow(3, 4, w - 8).narrow(2, 4, h - 8);
+    let x1 = {
+      let [_, _, h, w] = x1.dims();
+      x1.narrow(3, 4, w - 8).narrow(2, 4, h - 8)
+    };
 
     let x2 = leaky_relu(x2, 0.1);
     let x2 = self.conv2.forward(x2);
@@ -44,38 +42,22 @@ impl<B: Backend> UNet1<B> {
 pub struct UNet1Config {
   in_channels: usize,
   out_channels: usize,
-  for_x3: bool,
+  deconv: bool,
 }
 
 impl UNet1Config {
-  pub fn init_with<B: Backend>(&self, record: UNet1Record<B>) -> UNet1<B> {
+  pub fn init<B: Backend>(&self, device: &B::Device) -> UNet1<B> {
     UNet1 {
-      conv1: UNetConvConfig::new(self.in_channels, 32, 64).init_with(record.conv1),
+      conv1: UNetConvConfig::new(self.in_channels, 32, 64, false).init(device),
       conv1_down: Conv2dConfig::new([64, 64], [2, 2])
         .with_stride([2, 2])
-        .init_with(record.conv1_down),
-      conv2: UNetConvConfig::new(64, 128, 64).init_with(record.conv2),
+        .init(device),
+      conv2: UNetConvConfig::new(64, 128, 64, true).init(device),
       conv2_up: ConvTranspose2dConfig::new([64, 64], [2, 2])
         .with_stride([2, 2])
-        .init_with(record.conv2_up),
-      conv3: Conv2dConfig::new([64, 64], [3, 3]).init_with(record.conv3),
-      conv_bottom: match record.conv_bottom {
-        ConvBottomRecord::Deconv(record) => {
-          let kernel_size = if self.for_x3 { [5, 5] } else { [4, 4] };
-          let stride = if self.for_x3 { [3, 3] } else { [2, 2] };
-          let padding = if self.for_x3 { [2, 2] } else { [3, 3] };
-
-          ConvBottom::Deconv(
-            ConvTranspose2dConfig::new([64, self.out_channels], kernel_size)
-              .with_stride(stride)
-              .with_padding(padding)
-              .init_with(record),
-          )
-        }
-        ConvBottomRecord::Else(record) => {
-          ConvBottom::Else(Conv2dConfig::new([64, self.out_channels], [3, 3]).init_with(record))
-        }
-      },
+        .init(device),
+      conv3: Conv2dConfig::new([64, 64], [3, 3]).init(device),
+      conv_bottom: ConvBottomConfig::new(self.out_channels, self.deconv).init(device),
     }
   }
 }

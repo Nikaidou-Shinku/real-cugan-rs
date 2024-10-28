@@ -1,12 +1,7 @@
 use burn::{
-  config::Config,
-  module::Module,
   nn::conv::{Conv2d, Conv2dConfig},
-  tensor::{
-    activation::{relu, sigmoid},
-    backend::Backend,
-    Tensor,
-  },
+  prelude::*,
+  tensor::activation::{relu, sigmoid},
 };
 
 #[derive(Debug, Module)]
@@ -36,20 +31,20 @@ pub struct SeBlockConfig {
 }
 
 impl SeBlockConfig {
-  pub fn init_with<B: Backend>(&self, record: SeBlockRecord<B>) -> SeBlock<B> {
+  pub fn init<B: Backend>(&self, device: &B::Device) -> SeBlock<B> {
     SeBlock {
       conv1: Conv2dConfig::new(
         [self.in_channels, self.in_channels / self.reduction],
         [1, 1],
       )
       .with_bias(self.bias)
-      .init_with(record.conv1),
+      .init(device),
       conv2: Conv2dConfig::new(
         [self.in_channels / self.reduction, self.in_channels],
         [1, 1],
       )
       .with_bias(self.bias)
-      .init_with(record.conv2),
+      .init(device),
     }
   }
 }
